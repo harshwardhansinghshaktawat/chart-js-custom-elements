@@ -22,6 +22,7 @@ class SimpleLineChartElement extends HTMLElement {
             dashedLine: false,
             xAxisColor: '#34495e',
             yAxisColor: '#34495e',
+            chartTitle: 'Simple Line Chart',
             chartHeight: 400,
             xAxisTitle: 'Months',
             colors: [
@@ -118,7 +119,6 @@ class SimpleLineChartElement extends HTMLElement {
         this.appendChild(canvas);
         const ctx = canvas.getContext('2d');
 
-        // Set canvas pixel dimensions to match custom element
         const rect = this.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
@@ -173,13 +173,20 @@ class SimpleLineChartElement extends HTMLElement {
                 },
                 plugins: {
                     legend: {
-                        display: true,
+                        display: true, // Fixed legend at top
                         position: 'top',
                         labels: {
                             font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
                             color: '#333',
                             padding: 10
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: this.settings.chartTitle,
+                        font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
+                        color: '#2c3e50',
+                        padding: { top: 10, bottom: 10 }
                     },
                     datalabels: {
                         display: this.settings.showDataLabels,
@@ -219,7 +226,7 @@ class SimpleLineChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: 'Values',
+                            text: 'Values', // Single Y-axis, fixed title
                             font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
@@ -323,6 +330,13 @@ class SimpleLineChartElement extends HTMLElement {
                         color: '#333',
                         padding: 10
                     }
+                },
+                title: {
+                    display: true,
+                    text: this.settings.chartTitle,
+                    font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
+                    color: '#2c3e50',
+                    padding: { top: 10, bottom: 10 }
                 },
                 datalabels: { display: this.settings.showDataLabels, font: { size: this.settings.fontSize, family: this.settings.fontFamily }, color: '#333' }
             },
