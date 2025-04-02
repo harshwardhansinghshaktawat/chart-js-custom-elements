@@ -48,12 +48,10 @@ class SimpleLineChartElement extends HTMLElement {
             position: 'relative',
             overflow: 'hidden',
             padding: '0',
-            margin: '0',
-            background: '#f0f0f0' // Light background to see if element renders
+            margin: '0'
         });
 
         this.loadChartJs(() => {
-            console.log('Chart.js loaded, rendering chart');
             this.renderChart();
         });
     }
@@ -72,28 +70,18 @@ class SimpleLineChartElement extends HTMLElement {
                 this.style.height = `${this.settings.chartHeight}px`;
             }
             if (this.chart) {
-                console.log('Updating chart with new attributes');
                 this.updateChart();
             } else {
-                console.log('Rendering chart with new attributes');
                 this.renderChart();
             }
         }
     }
 
     loadChartJs(callback) {
-        if (window.Chart) {
-            console.log('Chart.js already loaded');
-            callback();
-            return;
-        }
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
-        script.onload = () => {
-            console.log('Chart.js script loaded successfully');
-            callback();
-        };
-        script.onerror = () => console.error('Failed to load Chart.js from CDN');
+        script.onload = () => callback();
+        script.onerror = () => console.error('Failed to load Chart.js');
         document.head.appendChild(script);
     }
 
@@ -113,7 +101,6 @@ class SimpleLineChartElement extends HTMLElement {
     }
 
     renderChart() {
-        console.log('Attempting to render chart');
         while (this.firstChild) {
             this.removeChild(this.firstChild);
         }
@@ -131,19 +118,11 @@ class SimpleLineChartElement extends HTMLElement {
         });
         this.appendChild(canvas);
         const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            console.error('Failed to get 2D context for canvas');
-            return;
-        }
 
+        // Set canvas pixel dimensions to match custom element
         const rect = this.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-            console.error('Custom element has zero size:', rect);
-            return;
-        }
         canvas.width = rect.width;
         canvas.height = rect.height;
-        console.log('Canvas size set to:', canvas.width, 'x', canvas.height);
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
@@ -168,132 +147,122 @@ class SimpleLineChartElement extends HTMLElement {
             })
             .filter(dataset => dataset !== null);
 
-        if (datasets.length === 0) {
-            console.warn('No valid datasets to render');
-            return;
-        }
+        if (datasets.length === 0) return;
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => ds.data.length > 0 ? ds.data.map((_, i) => this.settings.datasets[datasets.indexOf(ds)].split(';')[i].split(',')[0]) : []))];
-        console.log('Labels:', uniqueLabels);
-        console.log('Datasets:', datasets);
 
-        try {
-            this.chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: uniqueLabels,
-                    datasets: datasets
+        this.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: uniqueLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 30, // Space for legend at top
+                        bottom: 10,
+                        left: 10,
+                        right: 10
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                        padding: {
-                            top: 30,
-                            bottom: 10,
-                            left: 10,
-                            right: 10
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
+                            color: '#333',
+                            padding: 10
                         }
                     },
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
+                    title: {
+                        display: true,
+                        text: this.settings.chartTitle,
+                        font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
+                        color: '#2c3e50',
+                        padding: { top: 10, bottom: 10 }
                     },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
-                                color: '#333',
-                                padding: 10
+                    datalabels: {
+                        display: this.settings.showDataLabels,
+                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                        color: '#333'
+                    },
+                    tooltip: {
+                        enabled: true,
+                        position: 'nearest',
+                        callbacks: {
+                            label: context => {
+                                const dataset = context.dataset;
+                                const value = context.parsed.y;
+                                return `${dataset.label}: ${value}`;
                             }
-                        },
+                        }
+                    }
+                },
+                scales: {
+                    x: {
                         title: {
                             display: true,
-                            text: this.settings.chartTitle,
-                            font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
-                            color: '#2c3e50',
-                            padding: { top: 10, bottom: 10 }
+                            text: this.settings.xAxisTitle,
+                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
+                            color: this.settings.xAxisColor
                         },
-                        datalabels: {
-                            display: this.settings.showDataLabels,
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: '#333'
+                        grid: {
+                            display: this.settings.showGrid,
+                            lineWidth: this.settings.gridLineWidth,
+                            color: this.settings.gridLineColor
                         },
-                        tooltip: {
-                            enabled: true,
-                            position: 'nearest',
-                            callbacks: {
-                                label: context => {
-                                    const dataset = context.dataset;
-                                    const value = context.parsed.y;
-                                    return `${dataset.label}: ${value}`;
-                                }
-                            }
+                        ticks: {
+                            color: this.settings.xAxisColor,
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily }
                         }
                     },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: this.settings.xAxisTitle,
-                                font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
-                                color: this.settings.xAxisColor
-                            },
-                            grid: {
-                                display: this.settings.showGrid,
-                                lineWidth: this.settings.gridLineWidth,
-                                color: this.settings.gridLineColor
-                            },
-                            ticks: {
-                                color: this.settings.xAxisColor,
-                                font: { size: this.settings.fontSize, family: this.settings.fontFamily }
-                            }
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Values',
+                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
+                            color: this.settings.yAxisColor
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Values',
-                                font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
-                                color: this.settings.yAxisColor
-                            },
-                            grid: {
-                                display: this.settings.showGrid,
-                                lineWidth: this.settings.gridLineWidth,
-                                color: this.settings.gridLineColor
-                            },
-                            ticks: {
-                                color: this.settings.yAxisColor,
-                                font: { size: this.settings.fontSize, family: this.settings.fontFamily }
-                            }
+                        grid: {
+                            display: this.settings.showGrid,
+                            lineWidth: this.settings.gridLineWidth,
+                            color: this.settings.gridLineColor
+                        },
+                        ticks: {
+                            color: this.settings.yAxisColor,
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily }
                         }
-                    },
-                    animation: { duration: this.settings.enableAnimations ? 1500 : 0, easing: 'easeInOutQuart' },
-                    plugins: [{
-                        id: 'crosshair',
-                        afterDatasetsDraw: (chart) => {
-                            const { ctx, chartArea, scales } = chart;
-                            const activeElements = chart.tooltip._active;
-                            if (activeElements && activeElements.length) {
-                                const x = activeElements[0].element.x;
-                                ctx.save();
-                                ctx.beginPath();
-                                ctx.moveTo(x, chartArea.top);
-                                ctx.lineTo(x, chartArea.bottom);
-                                ctx.lineWidth = 1;
-                                ctx.strokeStyle = '#666';
-                                ctx.stroke();
-                                ctx.restore();
-                            }
+                    }
+                },
+                animation: { duration: this.settings.enableAnimations ? 1500 : 0, easing: 'easeInOutQuart' },
+                plugins: [{
+                    id: 'crosshair',
+                    afterDatasetsDraw: (chart) => {
+                        const { ctx, chartArea, scales } = chart;
+                        const activeElements = chart.tooltip._active;
+                        if (activeElements && activeElements.length) {
+                            const x = activeElements[0].element.x;
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.moveTo(x, chartArea.top);
+                            ctx.lineTo(x, chartArea.bottom);
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = '#666';
+                            ctx.stroke();
+                            ctx.restore();
                         }
-                    }]
-                }
-            });
-            console.log('Chart initialized successfully');
-        } catch (error) {
-            console.error('Error initializing Chart.js:', error);
-        }
+                    }
+                }]
+            }
+        });
 
         this.onResize = () => this.updateChartSize();
         window.addEventListener('resize', this.onResize);
@@ -304,17 +273,12 @@ class SimpleLineChartElement extends HTMLElement {
             const rect = this.getBoundingClientRect();
             this.chart.canvas.width = rect.width;
             this.chart.canvas.height = rect.height;
-            console.log('Resizing chart to:', rect.width, 'x', rect.height);
             this.chart.resize();
         }
     }
 
     updateChart() {
-        if (!this.chart) {
-            console.warn('No chart instance to update, attempting to render');
-            this.renderChart();
-            return;
-        }
+        if (!this.chart) return;
 
         const rect = this.getBoundingClientRect();
         this.chart.canvas.width = rect.width;
@@ -409,17 +373,37 @@ class SimpleLineChartElement extends HTMLElement {
             },
             animation: { duration: this.settings.enableAnimations ? 1500 : 0 }
         };
-        console.log('Updating chart with new data');
         this.chart.update();
     }
 
     disconnectedCallback() {
-        if (this.chart) {
-            this.chart.destroy();
-            console.log('Chart destroyed');
-        }
+        if (this.chart) this.chart.destroy();
         window.removeEventListener('resize', this.onResize);
     }
 }
 
 customElements.define('simple-line-chart', SimpleLineChartElement);
+
+// Export STYLE for consistency with multi-axis chart
+export const STYLE = `
+    :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+    }
+    canvas {
+        width: 100% !important;
+        height: 100% !important;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background: #fff;
+    }
+`;
