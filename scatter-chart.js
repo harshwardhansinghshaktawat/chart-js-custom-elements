@@ -6,7 +6,7 @@ class ScatterChartElement extends HTMLElement {
             datasets: [],
             showGrid: true,
             gridLineWidth: 1,
-            gridLineColor: '#ecf0f1',
+            gridLineColor: '#e0e0e0',
             showPoints: true,
             pointStyle: 'circle',
             enableAnimations: true,
@@ -14,18 +14,12 @@ class ScatterChartElement extends HTMLElement {
             fontFamily: 'Arial',
             fontSize: 12,
             pointRadius: 5,
-            xAxisColor: '#34495e',
-            yAxisColor: '#34495e',
+            xAxisColor: '#666',
+            yAxisColor: '#666',
             chartHeight: 400,
             xAxisTitle: 'X Values',
-            colors: [
-                '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6',
-                '#1abc9c', '#e67e22', '#34495e', '#8e44ad', '#2c3e50'
-            ],
-            legends: [
-                'Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5',
-                'Dataset 6', 'Dataset 7', 'Dataset 8', 'Dataset 9', 'Dataset 10'
-            ]
+            colors: ['#ff6384', '#36a2eb'],
+            legends: ['Dataset 1', 'Dataset 2']
         };
     }
 
@@ -139,7 +133,7 @@ class ScatterChartElement extends HTMLElement {
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
-                        top: 30, // Space for legend at top
+                        top: 30,
                         bottom: 10,
                         left: 10,
                         right: 10
@@ -150,15 +144,15 @@ class ScatterChartElement extends HTMLElement {
                         display: true,
                         position: 'top',
                         labels: {
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
-                            color: '#333',
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                            color: '#666',
                             padding: 10
                         }
                     },
                     datalabels: {
                         display: this.settings.showDataLabels,
                         font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                        color: '#333',
+                        color: '#666',
                         formatter: (value) => `(${value.x}, ${value.y})`
                     },
                     tooltip: {
@@ -178,7 +172,7 @@ class ScatterChartElement extends HTMLElement {
                         title: {
                             display: true,
                             text: this.settings.xAxisTitle,
-                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
+                            font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                             color: this.settings.xAxisColor
                         },
                         grid: {
@@ -195,7 +189,7 @@ class ScatterChartElement extends HTMLElement {
                         title: {
                             display: true,
                             text: 'Y Values',
-                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
+                            font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
                         grid: {
@@ -209,7 +203,7 @@ class ScatterChartElement extends HTMLElement {
                         }
                     }
                 },
-                animation: { duration: this.settings.enableAnimations ? 1500 : 0, easing: 'easeInOutQuart' }
+                animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
             }
         });
 
@@ -267,15 +261,15 @@ class ScatterChartElement extends HTMLElement {
                     display: true,
                     position: 'top',
                     labels: {
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
-                        color: '#333',
+                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                        color: '#666',
                         padding: 10
                     }
                 },
                 datalabels: { 
                     display: this.settings.showDataLabels, 
                     font: { size: this.settings.fontSize, family: this.settings.fontFamily }, 
-                    color: '#333',
+                    color: '#666',
                     formatter: (value) => `(${value.x}, ${value.y})`
                 }
             },
@@ -284,7 +278,7 @@ class ScatterChartElement extends HTMLElement {
                     title: {
                         display: true,
                         text: this.settings.xAxisTitle,
-                        font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
+                        font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                         color: this.settings.xAxisColor
                     },
                     grid: {
@@ -298,7 +292,7 @@ class ScatterChartElement extends HTMLElement {
                     title: {
                         display: true,
                         text: 'Y Values',
-                        font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
+                        font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                         color: this.settings.yAxisColor
                     },
                     grid: {
@@ -309,7 +303,7 @@ class ScatterChartElement extends HTMLElement {
                     ticks: { color: this.settings.yAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
                 }
             },
-            animation: { duration: this.settings.enableAnimations ? 1500 : 0 }
+            animation: { duration: this.settings.enableAnimations ? 1000 : 0 }
         };
         this.chart.update();
     }
