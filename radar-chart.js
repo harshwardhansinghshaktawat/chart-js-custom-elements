@@ -13,8 +13,8 @@ class RadarChartElement extends HTMLElement {
             fontSize: 12,
             axisColor: '#666',
             chartHeight: 400,
-            colors: ['#ff6384', '#36a2eb'],
-            legends: ['Dataset 1', 'Dataset 2']
+            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // 5 colors
+            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'] // 5 legends
         };
     }
 
@@ -177,7 +177,7 @@ class RadarChartElement extends HTMLElement {
                         callbacks: {
                             label: context => {
                                 const dataset = context.dataset;
-                                const value = context.parsed.r; // Radar uses radial value
+                                const value = context.parsed.r;
                                 return `${dataset.label}: ${value}`;
                             }
                         }
