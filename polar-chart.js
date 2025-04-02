@@ -9,15 +9,15 @@ class PolarChartElement extends HTMLElement {
             fontFamily: 'Arial',
             fontSize: 12,
             chartHeight: 400,
-            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // 5 colors
-            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'] // 5 legends
+            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'],
+            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5']
         };
     }
 
     connectedCallback() {
         Object.assign(this.style, {
             display: 'block',
-            width: '100%',
+            width: '100%', // Full width of parent container
             height: `${this.settings.chartHeight}px`,
             position: 'relative',
             overflow: 'hidden',
@@ -90,9 +90,9 @@ class PolarChartElement extends HTMLElement {
 
         const canvas = document.createElement('canvas');
         Object.assign(canvas.style, {
-            display: 'block',
-            width: '100%',
-            height: '100%',
+            display: 'block', // Ensure block-level to take full width
+            width: '100%',    // Full width of custom element
+            height: '100%',   // Full height of custom element
             position: 'absolute',
             top: '0',
             left: '0',
@@ -103,8 +103,8 @@ class PolarChartElement extends HTMLElement {
         const ctx = canvas.getContext('2d');
 
         const rect = this.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        canvas.width = rect.width;   // Set pixel width explicitly
+        canvas.height = rect.height; // Set pixel height explicitly
         console.log('Custom element dimensions:', { width: rect.width, height: rect.height });
         console.log('Canvas dimensions set to:', { width: canvas.width, height: canvas.height });
 
@@ -115,7 +115,7 @@ class PolarChartElement extends HTMLElement {
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: this.settings.colors.slice(0, parsed.data.length).map(color => `${color}80`), // 50% opacity
+                    backgroundColor: this.settings.colors.slice(0, parsed.data.length).map(color => `${color}80`),
                     borderColor: this.settings.colors.slice(0, parsed.data.length),
                     borderWidth: 1
                 };
@@ -170,7 +170,7 @@ class PolarChartElement extends HTMLElement {
                         callbacks: {
                             label: context => {
                                 const dataset = context.dataset;
-                                const value = context.parsed.r; // Polar uses radial value
+                                const value = context.parsed.r;
                                 return `${dataset.label}: ${value}`;
                             }
                         }
