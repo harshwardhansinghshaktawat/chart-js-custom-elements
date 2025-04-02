@@ -119,6 +119,7 @@ class SimpleLineChartElement extends HTMLElement {
         this.appendChild(canvas);
         const ctx = canvas.getContext('2d');
 
+        // Set canvas pixel dimensions to match custom element
         const rect = this.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
@@ -173,7 +174,7 @@ class SimpleLineChartElement extends HTMLElement {
                 },
                 plugins: {
                     legend: {
-                        display: true, // Fixed legend at top
+                        display: true,
                         position: 'top',
                         labels: {
                             font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
@@ -226,7 +227,7 @@ class SimpleLineChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: 'Values', // Single Y-axis, fixed title
+                            text: 'Values',
                             font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
@@ -382,3 +383,27 @@ class SimpleLineChartElement extends HTMLElement {
 }
 
 customElements.define('simple-line-chart', SimpleLineChartElement);
+
+// Export STYLE for consistency with multi-axis chart
+export const STYLE = `
+    :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+    }
+    canvas {
+        width: 100% !important;
+        height: 100% !important;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background: #fff;
+    }
+`;
