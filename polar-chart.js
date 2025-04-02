@@ -17,7 +17,7 @@ class PolarChartElement extends HTMLElement {
     connectedCallback() {
         Object.assign(this.style, {
             display: 'block',
-            width: '100%', // Full width of parent container
+            width: '100%',
             height: `${this.settings.chartHeight}px`,
             position: 'relative',
             overflow: 'hidden',
@@ -27,7 +27,8 @@ class PolarChartElement extends HTMLElement {
         });
 
         this.loadChartJs(() => {
-            this.renderChart();
+            // Add delay to ensure DOM is fully rendered
+            setTimeout(() => this.renderChart(), 100);
         });
     }
 
@@ -90,12 +91,9 @@ class PolarChartElement extends HTMLElement {
 
         const canvas = document.createElement('canvas');
         Object.assign(canvas.style, {
-            display: 'block', // Ensure block-level to take full width
-            width: '100%',    // Full width of custom element
-            height: '100%',   // Full height of custom element
-            position: 'absolute',
-            top: '0',
-            left: '0',
+            display: 'block',
+            width: '100%',
+            height: '100%',
             margin: '0',
             padding: '0'
         });
@@ -103,8 +101,12 @@ class PolarChartElement extends HTMLElement {
         const ctx = canvas.getContext('2d');
 
         const rect = this.getBoundingClientRect();
-        canvas.width = rect.width;   // Set pixel width explicitly
-        canvas.height = rect.height; // Set pixel height explicitly
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Custom element has zero dimensions:', { width: rect.width, height: rect.height });
+            return; // Exit if the element isn’t sized yet
+        }
+        canvas.width = rect.width;
+        canvas.height = rect.height;
         console.log('Custom element dimensions:', { width: rect.width, height: rect.height });
         console.log('Canvas dimensions set to:', { width: canvas.width, height: canvas.height });
 
@@ -130,71 +132,75 @@ class PolarChartElement extends HTMLElement {
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
         console.log('Chart data:', { labels: uniqueLabels, datasets });
 
-        this.chart = new Chart(ctx, {
-            type: 'polarArea',
-            data: {
-                labels: uniqueLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 30,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
-                    }
+        try {
+            this.chart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: uniqueLabels,
+                    datasets: datasets
                 },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: '#666',
-                            padding: 10
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 30,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
                         }
                     },
-                    datalabels: {
-                        display: this.settings.showDataLabels,
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                        color: '#fff',
-                        anchor: 'center',
-                        align: 'center'
-                    },
-                    tooltip: {
-                        enabled: true,
-                        position: 'nearest',
-                        callbacks: {
-                            label: context => {
-                                const dataset = context.dataset;
-                                const value = context.parsed.r;
-                                return `${dataset.label}: ${value}`;
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                                color: '#666',
+                                padding: 10
+                            }
+                        },
+                        datalabels: {
+                            display: this.settings.showDataLabels,
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                            color: '#fff',
+                            anchor: 'center',
+                            align: 'center'
+                        },
+                        tooltip: {
+                            enabled: true,
+                            position: 'nearest',
+                            callbacks: {
+                                label: context => {
+                                    const dataset = context.dataset;
+                                    const value = context.parsed.r;
+                                    return `${dataset.label}: ${value}`;
+                                }
                             }
                         }
-                    }
-                },
-                scales: {
-                    r: {
-                        ticks: {
-                            display: true,
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: '#666'
-                        },
-                        grid: {
-                            display: true,
-                            color: '#e0e0e0'
-                        },
-                        beginAtZero: true
-                    }
-                },
-                animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
-            }
-        });
-        console.log('Chart initialized:', this.chart);
-        console.log('Chart canvas dimensions after init:', { width: this.chart.canvas.width, height: this.chart.canvas.height });
+                    },
+                    scales: {
+                        r: {
+                            ticks: {
+                                display: true,
+                                font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                                color: '#666'
+                            },
+                            grid: {
+                                display: true,
+                                color: '#e0e0e0'
+                            },
+                            beginAtZero: true
+                        }
+                    },
+                    animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
+                }
+            });
+            console.log('Chart initialized:', this.chart);
+            console.log('Chart canvas dimensions after init:', { width: this.chart.canvas.width, height: this.chart.canvas.height });
+        } catch (error) {
+            console.error('Error initializing chart:', error);
+        }
 
         this.onResize = () => this.updateChartSize();
         window.addEventListener('resize', this.onResize);
@@ -203,6 +209,10 @@ class PolarChartElement extends HTMLElement {
     updateChartSize() {
         if (this.chart) {
             const rect = this.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn('Custom element has zero dimensions on resize:', { width: rect.width, height: rect.height });
+                return;
+            }
             this.chart.canvas.width = rect.width;
             this.chart.canvas.height = rect.height;
             this.chart.resize();
@@ -214,6 +224,10 @@ class PolarChartElement extends HTMLElement {
         if (!this.chart) return;
 
         const rect = this.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Custom element has zero dimensions on update:', { width: rect.width, height: rect.height });
+            return;
+        }
         this.chart.canvas.width = rect.width;
         this.chart.canvas.height = rect.height;
 
