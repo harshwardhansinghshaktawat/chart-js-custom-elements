@@ -44,10 +44,12 @@ class FloatingBarChartElement extends HTMLElement {
         if (newValue && newValue !== oldValue) {
             if (name === 'data') {
                 this.settings.datasets = JSON.parse(newValue);
+                console.log('Datasets updated:', this.settings.datasets);
             } else if (name === 'options') {
                 const newOptions = JSON.parse(newValue);
                 Object.assign(this.settings, newOptions);
                 this.style.height = `${this.settings.chartHeight}px`;
+                console.log('Options updated:', this.settings);
             }
             if (this.chart) {
                 this.updateChart();
@@ -66,7 +68,10 @@ class FloatingBarChartElement extends HTMLElement {
     }
 
     parseDataset(rawData) {
-        if (!rawData) return null;
+        if (!rawData) {
+            console.error('No raw data provided');
+            return null;
+        }
         const entries = rawData.split(';');
         const labels = [];
         const data = [];
@@ -76,11 +81,16 @@ class FloatingBarChartElement extends HTMLElement {
                 const [start, end] = range.split('-').map(Number);
                 if (!isNaN(start) && !isNaN(end)) {
                     labels.push(label);
-                    data.push([start, end]); // Floating bar range as [start, end]
+                    data.push([start, end]);
+                } else {
+                    console.warn(`Invalid range in entry: ${entry}`);
                 }
+            } else {
+                console.warn(`Invalid entry: ${entry}`);
             }
         });
-        return { labels, data };
+        console.log('Parsed dataset:', { labels, data });
+        return data.length > 0 ? { labels, data } : null;
     }
 
     renderChart() {
@@ -105,6 +115,7 @@ class FloatingBarChartElement extends HTMLElement {
         const rect = this.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
+        console.log('Canvas dimensions:', { width: rect.width, height: rect.height });
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
@@ -121,9 +132,13 @@ class FloatingBarChartElement extends HTMLElement {
             })
             .filter(dataset => dataset !== null);
 
-        if (datasets.length === 0) return;
+        if (datasets.length === 0) {
+            console.error('No valid datasets to render');
+            return;
+        }
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
+        console.log('Chart data:', { labels: uniqueLabels, datasets });
 
         this.chart = new Chart(ctx, {
             type: 'bar',
@@ -158,7 +173,7 @@ class FloatingBarChartElement extends HTMLElement {
                         color: '#666',
                         anchor: 'end',
                         align: 'top',
-                        formatter: (value) => `${value[0]} - ${value[1]}` // Show range
+                        formatter: (value) => `${value[0]} - ${value[1]}`
                     },
                     tooltip: {
                         enabled: true,
@@ -166,7 +181,7 @@ class FloatingBarChartElement extends HTMLElement {
                         callbacks: {
                             label: context => {
                                 const dataset = context.dataset;
-                                const value = context.parsed.y;
+                                const value = context.raw; // Use raw data for floating bars
                                 return `${dataset.label}: ${value[0]} - ${value[1]}`;
                             }
                         }
@@ -193,4 +208,74 @@ class FloatingBarChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: 'Values
+                            text: 'Values',
+                            font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
+                            color: this.settings.yAxisColor
+                        },
+                        grid: {
+                            display: this.settings.showGrid,
+                            lineWidth: this.settings.gridLineWidth,
+                            color: this.settings.gridLineColor
+                        },
+                        ticks: {
+                            color: this.settings.yAxisColor,
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily }
+                        }
+                    }
+                },
+                animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
+            }
+        });
+        console.log('Chart initialized:', this.chart);
+
+        this.onResize = () => this.updateChartSize();
+        window.addEventListener('resize', this.onResize);
+    }
+
+    updateChartSize() {
+        if (this.chart) {
+            const rect = this.getBoundingClientRect();
+            this.chart.canvas.width = rect.width;
+            this.chart.canvas.height = rect.height;
+            this.chart.resize();
+            console.log('Chart resized:', { width: rect.width, height: rect.height });
+        }
+    }
+
+    updateChart() {
+        if (!this.chart) return;
+
+        const rect = this.getBoundingClientRect();
+        this.chart.canvas.width = rect.width;
+        this.chart.canvas.height = rect.height;
+
+        const datasets = this.settings.datasets
+            .map((rawData, index) => {
+                const parsed = this.parseDataset(rawData);
+                if (!parsed) return null;
+                const backgroundColor = this.settings.colors[index % this.settings.colors.length] || '#000000';
+                return {
+                    label: this.settings.legends[index] || `Dataset ${index + 1}`,
+                    data: parsed.data,
+                    backgroundColor: backgroundColor,
+                    borderColor: backgroundColor,
+                    borderWidth: 1
+                };
+            })
+            .filter(dataset => dataset !== null);
+
+        const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
+        console.log('Updating chart with:', { labels: uniqueLabels, datasets });
+
+        this.chart.data.labels = uniqueLabels;
+        this.chart.data.datasets = datasets;
+        this.chart.update();
+    }
+
+    disconnectedCallback() {
+        if (this.chart) this.chart.destroy();
+        window.removeEventListener('resize', this.onResize);
+    }
+}
+
+customElements.define('floating-bar-chart', FloatingBarChartElement);
