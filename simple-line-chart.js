@@ -22,7 +22,6 @@ class SimpleLineChartElement extends HTMLElement {
             dashedLine: false,
             xAxisColor: '#34495e',
             yAxisColor: '#34495e',
-            chartTitle: 'Simple Line Chart',
             chartHeight: 400,
             xAxisTitle: 'Months',
             colors: [
@@ -182,13 +181,6 @@ class SimpleLineChartElement extends HTMLElement {
                             padding: 10
                         }
                     },
-                    title: {
-                        display: true,
-                        text: this.settings.chartTitle,
-                        font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
-                        color: '#2c3e50',
-                        padding: { top: 10, bottom: 10 }
-                    },
                     datalabels: {
                         display: this.settings.showDataLabels,
                         font: { size: this.settings.fontSize, family: this.settings.fontFamily },
@@ -332,13 +324,6 @@ class SimpleLineChartElement extends HTMLElement {
                         padding: 10
                     }
                 },
-                title: {
-                    display: true,
-                    text: this.settings.chartTitle,
-                    font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
-                    color: '#2c3e50',
-                    padding: { top: 10, bottom: 10 }
-                },
                 datalabels: { display: this.settings.showDataLabels, font: { size: this.settings.fontSize, family: this.settings.fontFamily }, color: '#333' }
             },
             scales: {
@@ -383,27 +368,3 @@ class SimpleLineChartElement extends HTMLElement {
 }
 
 customElements.define('simple-line-chart', SimpleLineChartElement);
-
-// Export STYLE for consistency with multi-axis chart
-export const STYLE = `
-    :host {
-        display: block;
-        width: 100%;
-        height: 100%;
-        position: relative;
-        overflow: hidden;
-        padding: 0;
-        margin: 0;
-    }
-    canvas {
-        width: 100% !important;
-        height: 100% !important;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        background: #fff;
-    }
-`;
