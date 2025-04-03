@@ -9,8 +9,8 @@ class PieChartElement extends HTMLElement {
             fontFamily: 'Arial',
             fontSize: 12,
             chartHeight: 400,
-            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // 5 colors
-            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'] // 5 legends
+            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // Fallback colors
+            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5']
         };
     }
 
@@ -27,7 +27,7 @@ class PieChartElement extends HTMLElement {
         });
 
         this.loadChartJs(() => {
-            setTimeout(() => this.renderChart(), 100); // Delay to ensure DOM is ready
+            setTimeout(() => this.renderChart(), 100);
         });
     }
 
@@ -70,17 +70,22 @@ class PieChartElement extends HTMLElement {
         const entries = rawData.split(';');
         const labels = [];
         const data = [];
-        entries.forEach(entry => {
-            const [label, value] = entry.split(',');
-            if (label && !isNaN(value)) {
+        const backgroundColors = [];
+        entries.forEach((entry, index) => {
+            const [label, value, color] = entry.split(',');
+            if (label && !isNaN(value) && color) {
                 labels.push(label);
                 data.push(parseFloat(value));
+                backgroundColors.push(color); // Use provided color
             } else {
-                console.warn(`Invalid entry: ${entry}`);
+                console.warn(`Invalid entry: ${entry}, using fallback color`);
+                labels.push(label || `Segment ${index + 1}`);
+                data.push(parseFloat(value) || 0);
+                backgroundColors.push(this.settings.colors[index % this.settings.colors.length]); // Fallback color
             }
         });
-        console.log('Parsed dataset:', { labels, data });
-        return data.length > 0 ? { labels, data } : null;
+        console.log('Parsed dataset:', { labels, data, backgroundColors });
+        return data.length > 0 ? { labels, data, backgroundColors } : null;
     }
 
     renderChart() {
@@ -116,7 +121,7 @@ class PieChartElement extends HTMLElement {
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: this.settings.colors.slice(0, parsed.data.length),
+                    backgroundColor: parsed.backgroundColors, // Use per-segment colors
                     borderColor: '#fff',
                     borderWidth: 1
                 };
@@ -223,7 +228,7 @@ class PieChartElement extends HTMLElement {
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: this.settings.colors.slice(0, parsed.data.length),
+                    backgroundColor: parsed.backgroundColors,
                     borderColor: '#fff',
                     borderWidth: 1
                 };
