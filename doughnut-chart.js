@@ -9,8 +9,8 @@ class DoughnutChartElement extends HTMLElement {
             fontFamily: 'Arial',
             fontSize: 12,
             chartHeight: 400,
-            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // 5 colors
-            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5'] // 5 legends
+            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // Fallback colors
+            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5']
         };
     }
 
@@ -22,11 +22,12 @@ class DoughnutChartElement extends HTMLElement {
             position: 'relative',
             overflow: 'hidden',
             padding: '0',
-            margin: '0'
+            margin: '0',
+            boxSizing: 'border-box'
         });
 
         this.loadChartJs(() => {
-            this.renderChart();
+            setTimeout(() => this.renderChart(), 100); // Delay to ensure DOM is ready
         });
     }
 
@@ -69,17 +70,22 @@ class DoughnutChartElement extends HTMLElement {
         const entries = rawData.split(';');
         const labels = [];
         const data = [];
-        entries.forEach(entry => {
-            const [label, value] = entry.split(',');
-            if (label && !isNaN(value)) {
+        const backgroundColors = [];
+        entries.forEach((entry, index) => {
+            const [label, value, color] = entry.split(',');
+            if (label && !isNaN(value) && color) {
                 labels.push(label);
                 data.push(parseFloat(value));
+                backgroundColors.push(color); // Use provided color
             } else {
-                console.warn(`Invalid entry: ${entry}`);
+                console.warn(`Invalid entry: ${entry}, using fallback color`);
+                labels.push(label || `Segment ${index + 1}`);
+                data.push(parseFloat(value) || 0);
+                backgroundColors.push(this.settings.colors[index % this.settings.colors.length]); // Fallback color
             }
         });
-        console.log('Parsed dataset:', { labels, data });
-        return data.length > 0 ? { labels, data } : null;
+        console.log('Parsed dataset:', { labels, data, backgroundColors });
+        return data.length > 0 ? { labels, data, backgroundColors } : null;
     }
 
     renderChart() {
@@ -89,12 +95,12 @@ class DoughnutChartElement extends HTMLElement {
 
         const canvas = document.createElement('canvas');
         Object.assign(canvas.style, {
+            display: 'block',
             width: '100%',
             height: '100%',
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            top: '0',
+            left: '0',
             margin: '0',
             padding: '0'
         });
@@ -102,9 +108,14 @@ class DoughnutChartElement extends HTMLElement {
         const ctx = canvas.getContext('2d');
 
         const rect = this.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Custom element has zero dimensions:', { width: rect.width, height: rect.height });
+            return;
+        }
         canvas.width = rect.width;
         canvas.height = rect.height;
-        console.log('Canvas dimensions:', { width: rect.width, height: rect.height });
+        console.log('Custom element dimensions:', { width: rect.width, height: rect.height });
+        console.log('Canvas dimensions set to:', { width: canvas.width, height: canvas.height });
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
@@ -113,7 +124,7 @@ class DoughnutChartElement extends HTMLElement {
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: this.settings.colors.slice(0, parsed.data.length), // Match colors to data length
+                    backgroundColor: parsed.backgroundColors, // Use per-segment colors
                     borderColor: '#fff',
                     borderWidth: 2
                 };
@@ -128,56 +139,61 @@ class DoughnutChartElement extends HTMLElement {
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
         console.log('Chart data:', { labels: uniqueLabels, datasets });
 
-        this.chart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: uniqueLabels,
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 30,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
-                    }
+        try {
+            this.chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: uniqueLabels,
+                    datasets: datasets
                 },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: '#666',
-                            padding: 10
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 30,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
                         }
                     },
-                    datalabels: {
-                        display: this.settings.showDataLabels,
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                        color: '#fff',
-                        anchor: 'center',
-                        align: 'center'
-                    },
-                    tooltip: {
-                        enabled: true,
-                        position: 'nearest',
-                        callbacks: {
-                            label: context => {
-                                const dataset = context.dataset;
-                                const value = context.parsed;
-                                return `${dataset.label}: ${value}`;
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                                color: '#666',
+                                padding: 10
+                            }
+                        },
+                        datalabels: {
+                            display: this.settings.showDataLabels,
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                            color: '#fff',
+                            anchor: 'center',
+                            align: 'center'
+                        },
+                        tooltip: {
+                            enabled: true,
+                            position: 'nearest',
+                            callbacks: {
+                                label: context => {
+                                    const dataset = context.dataset;
+                                    const value = context.parsed;
+                                    return `${dataset.label}: ${value}`;
+                                }
                             }
                         }
-                    }
-                },
-                animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
-            }
-        });
-        console.log('Chart initialized:', this.chart);
+                    },
+                    animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
+                }
+            });
+            console.log('Chart initialized:', this.chart);
+            console.log('Chart canvas dimensions after init:', { width: this.chart.canvas.width, height: this.chart.canvas.height });
+        } catch (error) {
+            console.error('Error initializing chart:', error);
+        }
 
         this.onResize = () => this.updateChartSize();
         window.addEventListener('resize', this.onResize);
@@ -186,10 +202,14 @@ class DoughnutChartElement extends HTMLElement {
     updateChartSize() {
         if (this.chart) {
             const rect = this.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn('Custom element has zero dimensions on resize:', { width: rect.width, height: rect.height });
+                return;
+            }
             this.chart.canvas.width = rect.width;
             this.chart.canvas.height = rect.height;
             this.chart.resize();
-            console.log('Chart resized:', { width: rect.width, height: rect.height });
+            console.log('Chart resized to:', { width: rect.width, height: rect.height });
         }
     }
 
@@ -197,6 +217,10 @@ class DoughnutChartElement extends HTMLElement {
         if (!this.chart) return;
 
         const rect = this.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Custom element has zero dimensions on update:', { width: rect.width, height: rect.height });
+            return;
+        }
         this.chart.canvas.width = rect.width;
         this.chart.canvas.height = rect.height;
 
@@ -207,7 +231,7 @@ class DoughnutChartElement extends HTMLElement {
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: this.settings.colors.slice(0, parsed.data.length),
+                    backgroundColor: parsed.backgroundColors,
                     borderColor: '#fff',
                     borderWidth: 2
                 };
