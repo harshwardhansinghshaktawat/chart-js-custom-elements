@@ -27,7 +27,7 @@ class DoughnutChartElement extends HTMLElement {
         });
 
         this.loadChartJs(() => {
-            setTimeout(() => this.renderChart(), 100); // Delay to ensure DOM is ready
+            setTimeout(() => this.renderChart(), 100);
         });
     }
 
@@ -72,13 +72,15 @@ class DoughnutChartElement extends HTMLElement {
         const data = [];
         const backgroundColors = [];
         entries.forEach((entry, index) => {
-            const [label, value, color] = entry.split(',');
-            if (label && !isNaN(value) && color) {
+            const parts = entry.split(',');
+            const [label, value, color] = parts;
+            if (parts.length === 3 && label && !isNaN(value) && color) {
                 labels.push(label);
                 data.push(parseFloat(value));
                 backgroundColors.push(color); // Use provided color
+                console.log(`Parsed entry ${index}:`, { label, value: parseFloat(value), color });
             } else {
-                console.warn(`Invalid entry: ${entry}, using fallback color`);
+                console.warn(`Invalid entry: ${entry}, using fallback`);
                 labels.push(label || `Segment ${index + 1}`);
                 data.push(parseFloat(value) || 0);
                 backgroundColors.push(this.settings.colors[index % this.settings.colors.length]); // Fallback color
@@ -164,7 +166,19 @@ class DoughnutChartElement extends HTMLElement {
                             labels: {
                                 font: { size: this.settings.fontSize, family: this.settings.fontFamily },
                                 color: '#666',
-                                padding: 10
+                                padding: 10,
+                                // Ensure legend colors match segment colors
+                                generateLabels: chart => {
+                                    const dataset = chart.data.datasets[0]; // Assuming single dataset for legend clarity
+                                    return chart.data.labels.map((label, i) => ({
+                                        text: label,
+                                        fillStyle: dataset.backgroundColor[i],
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: dataset.borderWidth,
+                                        hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i].hidden,
+                                        index: i
+                                    }));
+                                }
                             }
                         },
                         datalabels: {
