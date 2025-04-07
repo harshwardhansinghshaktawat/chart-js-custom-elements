@@ -10,7 +10,7 @@ class PieChartElement extends HTMLElement {
             fontSize: 12,
             chartHeight: 400,
             colors: ['#ff6384'], // Single fallback color
-            legends: ['Dataset 1']
+            legends: ['Dataset 1'] // Not used directly for segment legends
         };
     }
 
@@ -39,7 +39,7 @@ class PieChartElement extends HTMLElement {
         if (newValue && newValue !== oldValue) {
             if (name === 'data') {
                 const datasets = JSON.parse(newValue);
-                this.settings.dataset = datasets[0] || ''; // Only first dataset
+                this.settings.dataset = datasets[0] || '';
                 console.log('Dataset updated:', this.settings.dataset);
             } else if (name === 'options') {
                 const newOptions = JSON.parse(newValue);
@@ -120,7 +120,6 @@ class PieChartElement extends HTMLElement {
         }
 
         const dataset = {
-            label: this.settings.legends[0],
             data: parsed.data,
             backgroundColor: parsed.backgroundColors, // Use per-segment colors
             borderColor: '#fff',
@@ -133,7 +132,7 @@ class PieChartElement extends HTMLElement {
             this.chart = new Chart(ctx, {
                 type: 'pie',
                 data: {
-                    labels: parsed.labels,
+                    labels: parsed.labels, // Each segment gets its own label
                     datasets: [dataset] // Single dataset
                 },
                 options: {
@@ -155,16 +154,7 @@ class PieChartElement extends HTMLElement {
                                 font: { size: this.settings.fontSize, family: this.settings.fontFamily },
                                 color: '#666',
                                 padding: 10,
-                                generateLabels: (chart) => {
-                                    const dataset = chart.data.datasets[0];
-                                    return [{
-                                        text: dataset.label,
-                                        fillStyle: dataset.backgroundColor[0], // Use first color for legend
-                                        strokeStyle: dataset.borderColor,
-                                        lineWidth: dataset.borderWidth,
-                                        datasetIndex: 0
-                                    }];
-                                }
+                                // Default legend behavior uses segment colors
                             }
                         },
                         datalabels: {
@@ -179,9 +169,9 @@ class PieChartElement extends HTMLElement {
                             position: 'nearest',
                             callbacks: {
                                 label: context => {
-                                    const dataset = context.dataset;
+                                    const label = context.label || '';
                                     const value = context.parsed;
-                                    return `${dataset.label}: ${value}`;
+                                    return `${label}: ${value}`;
                                 }
                             }
                         }
@@ -230,7 +220,6 @@ class PieChartElement extends HTMLElement {
         }
 
         const dataset = {
-            label: this.settings.legends[0],
             data: parsed.data,
             backgroundColor: parsed.backgroundColors,
             borderColor: '#fff',
