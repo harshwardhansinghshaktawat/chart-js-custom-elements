@@ -62,7 +62,7 @@ class PieChartElement extends HTMLElement {
         document.head.appendChild(script);
     }
 
-    parseDataset(rawData) {
+    parseDataset(rawData, datasetIndex) {
         if (!rawData) {
             console.error('No raw data provided');
             return null;
@@ -111,12 +111,10 @@ class PieChartElement extends HTMLElement {
         }
         canvas.width = rect.width;
         canvas.height = rect.height;
-        console.log('Custom element dimensions:', { width: rect.width, height: rect.height });
-        console.log('Canvas dimensions set to:', { width: canvas.width, height: canvas.height });
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
-                const parsed = this.parseDataset(rawData);
+                const parsed = this.parseDataset(rawData, index);
                 if (!parsed) return null;
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
@@ -161,7 +159,18 @@ class PieChartElement extends HTMLElement {
                             labels: {
                                 font: { size: this.settings.fontSize, family: this.settings.fontFamily },
                                 color: '#666',
-                                padding: 10
+                                padding: 10,
+                                // Ensure legend colors match dataset colors
+                                generateLabels: (chart) => {
+                                    const datasets = chart.data.datasets;
+                                    return datasets.map((dataset, i) => ({
+                                        text: dataset.label,
+                                        fillStyle: dataset.backgroundColor[0], // Use first color as representative
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: dataset.borderWidth,
+                                        datasetIndex: i
+                                    }));
+                                }
                             }
                         },
                         datalabels: {
@@ -187,7 +196,6 @@ class PieChartElement extends HTMLElement {
                 }
             });
             console.log('Chart initialized:', this.chart);
-            console.log('Chart canvas dimensions after init:', { width: this.chart.canvas.width, height: this.chart.canvas.height });
         } catch (error) {
             console.error('Error initializing chart:', error);
         }
@@ -223,7 +231,7 @@ class PieChartElement extends HTMLElement {
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
-                const parsed = this.parseDataset(rawData);
+                const parsed = this.parseDataset(rawData, index);
                 if (!parsed) return null;
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
