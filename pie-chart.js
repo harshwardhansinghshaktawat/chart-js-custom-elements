@@ -3,14 +3,14 @@ class PieChartElement extends HTMLElement {
         super();
         this.chart = null;
         this.settings = {
-            datasets: [],
+            dataset: '',
             enableAnimations: true,
             showDataLabels: false,
             fontFamily: 'Arial',
             fontSize: 12,
             chartHeight: 400,
-            colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // Fallback colors
-            legends: ['Dataset 1', 'Dataset 2', 'Dataset 3', 'Dataset 4', 'Dataset 5']
+            colors: ['#ff6384'], // Single fallback color
+            legends: ['Dataset 1']
         };
     }
 
@@ -38,8 +38,9 @@ class PieChartElement extends HTMLElement {
     attributeChangedCallback(name, oldValue, newValue) {
         if (newValue && newValue !== oldValue) {
             if (name === 'data') {
-                this.settings.datasets = JSON.parse(newValue);
-                console.log('Datasets updated:', this.settings.datasets);
+                const datasets = JSON.parse(newValue);
+                this.settings.dataset = datasets[0] || ''; // Only first dataset
+                console.log('Dataset updated:', this.settings.dataset);
             } else if (name === 'options') {
                 const newOptions = JSON.parse(newValue);
                 Object.assign(this.settings, newOptions);
@@ -62,7 +63,7 @@ class PieChartElement extends HTMLElement {
         document.head.appendChild(script);
     }
 
-    parseDataset(rawData, datasetIndex) {
+    parseDataset(rawData) {
         if (!rawData) {
             console.error('No raw data provided');
             return null;
@@ -81,7 +82,7 @@ class PieChartElement extends HTMLElement {
                 console.warn(`Invalid entry: ${entry}, using fallback color`);
                 labels.push(label || `Segment ${index + 1}`);
                 data.push(parseFloat(value) || 0);
-                backgroundColors.push(this.settings.colors[index % this.settings.colors.length]); // Fallback color
+                backgroundColors.push(this.settings.colors[0]); // Single fallback color
             }
         });
         console.log('Parsed dataset:', { labels, data, backgroundColors });
@@ -112,34 +113,28 @@ class PieChartElement extends HTMLElement {
         canvas.width = rect.width;
         canvas.height = rect.height;
 
-        const datasets = this.settings.datasets
-            .map((rawData, index) => {
-                const parsed = this.parseDataset(rawData, index);
-                if (!parsed) return null;
-                return {
-                    label: this.settings.legends[index] || `Dataset ${index + 1}`,
-                    data: parsed.data,
-                    backgroundColor: parsed.backgroundColors, // Use per-segment colors
-                    borderColor: '#fff',
-                    borderWidth: 1
-                };
-            })
-            .filter(dataset => dataset !== null);
-
-        if (datasets.length === 0) {
-            console.error('No valid datasets to render');
+        const parsed = this.parseDataset(this.settings.dataset);
+        if (!parsed) {
+            console.error('No valid dataset to render');
             return;
         }
 
-        const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Chart data:', { labels: uniqueLabels, datasets });
+        const dataset = {
+            label: this.settings.legends[0],
+            data: parsed.data,
+            backgroundColor: parsed.backgroundColors, // Use per-segment colors
+            borderColor: '#fff',
+            borderWidth: 1
+        };
+
+        console.log('Chart data:', { labels: parsed.labels, dataset });
 
         try {
             this.chart = new Chart(ctx, {
                 type: 'pie',
                 data: {
-                    labels: uniqueLabels,
-                    datasets: datasets
+                    labels: parsed.labels,
+                    datasets: [dataset] // Single dataset
                 },
                 options: {
                     responsive: true,
@@ -160,16 +155,15 @@ class PieChartElement extends HTMLElement {
                                 font: { size: this.settings.fontSize, family: this.settings.fontFamily },
                                 color: '#666',
                                 padding: 10,
-                                // Ensure legend colors match dataset colors
                                 generateLabels: (chart) => {
-                                    const datasets = chart.data.datasets;
-                                    return datasets.map((dataset, i) => ({
+                                    const dataset = chart.data.datasets[0];
+                                    return [{
                                         text: dataset.label,
-                                        fillStyle: dataset.backgroundColor[0], // Use first color as representative
+                                        fillStyle: dataset.backgroundColor[0], // Use first color for legend
                                         strokeStyle: dataset.borderColor,
                                         lineWidth: dataset.borderWidth,
-                                        datasetIndex: i
-                                    }));
+                                        datasetIndex: 0
+                                    }];
                                 }
                             }
                         },
@@ -229,25 +223,24 @@ class PieChartElement extends HTMLElement {
         this.chart.canvas.width = rect.width;
         this.chart.canvas.height = rect.height;
 
-        const datasets = this.settings.datasets
-            .map((rawData, index) => {
-                const parsed = this.parseDataset(rawData, index);
-                if (!parsed) return null;
-                return {
-                    label: this.settings.legends[index] || `Dataset ${index + 1}`,
-                    data: parsed.data,
-                    backgroundColor: parsed.backgroundColors,
-                    borderColor: '#fff',
-                    borderWidth: 1
-                };
-            })
-            .filter(dataset => dataset !== null);
+        const parsed = this.parseDataset(this.settings.dataset);
+        if (!parsed) {
+            console.error('No valid dataset to update');
+            return;
+        }
 
-        const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Updating chart with:', { labels: uniqueLabels, datasets });
+        const dataset = {
+            label: this.settings.legends[0],
+            data: parsed.data,
+            backgroundColor: parsed.backgroundColors,
+            borderColor: '#fff',
+            borderWidth: 1
+        };
 
-        this.chart.data.labels = uniqueLabels;
-        this.chart.data.datasets = datasets;
+        console.log('Updating chart with:', { labels: parsed.labels, dataset });
+
+        this.chart.data.labels = parsed.labels;
+        this.chart.data.datasets = [dataset];
         this.chart.update();
     }
 
