@@ -25,6 +25,7 @@ class SimpleLineChartElement extends HTMLElement {
             chartTitle: 'Simple Line Chart',
             chartHeight: 400,
             xAxisTitle: 'Months',
+            yAxisTitle: 'Values', // Kept only yAxisTitle
             colors: [
                 '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6',
                 '#1abc9c', '#e67e22', '#34495e', '#8e44ad', '#2c3e50'
@@ -173,7 +174,7 @@ class SimpleLineChartElement extends HTMLElement {
                 },
                 plugins: {
                     legend: {
-                        display: true, // Fixed legend at top
+                        display: true,
                         position: 'top',
                         labels: {
                             font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
@@ -226,7 +227,7 @@ class SimpleLineChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: 'Values', // Single Y-axis, fixed title
+                            text: this.settings.yAxisTitle,
                             font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
@@ -358,7 +359,7 @@ class SimpleLineChartElement extends HTMLElement {
                 y: {
                     title: {
                         display: true,
-                        text: 'Values',
+                        text: this.settings.yAxisTitle,
                         font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
                         color: this.settings.yAxisColor
                     },
