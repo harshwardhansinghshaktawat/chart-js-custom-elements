@@ -1,24 +1,42 @@
-class BarChartElement extends HTMLElement {
+class MultiAxisChartElement extends HTMLElement {
     constructor() {
         super();
         this.chart = null;
         this.settings = {
             datasets: [],
+            showLegend: true,
+            legendPosition: 'top',
             showGrid: true,
-            gridLineWidth: 1,
-            gridLineColor: '#e0e0e0',
+            showPoints: true,
+            pointStyle: 'circle',
+            lineTension: 0.4,
+            steppedLine: false,
+            fillArea: false,
+            primaryAxisTitle: 'Values (Left)',
+            secondaryAxisTitle: 'Values (Right)',
             enableAnimations: true,
             showDataLabels: false,
             fontFamily: 'Arial',
             fontSize: 12,
-            barBorderRadius: 5, // Default border radius for rounded bars
-            xAxisColor: '#666',
-            yAxisColor: '#666',
-            chartHeight: 400,
-            xAxisTitle: 'X Values',
-            yAxisTitle: 'Y Values', // Added yAxisTitle
-            colors: ['#ff6384', '#36a2eb'],
-            legends: ['Dataset 1', 'Dataset 2']
+            lineWidth: 2,
+            pointRadius: 5,
+            areaOpacity: 0.2,
+            dashedLine: false,
+            xAxisColor: '#34495e',
+            yAxisColor: '#34495e',
+            chartTitle: 'Multi-Axis Line Chart',
+            colors: [
+                '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6',
+                '#1abc9c', '#e67e22', '#34495e', '#8e44ad', '#2c3e50'
+            ],
+            fillColors: [
+                '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6',
+                '#1abc9c', '#e67e22', '#34495e', '#8e44ad', '#2c3e50'
+            ],
+            legends: [
+                'Sales', 'Revenue', 'Profit', 'Expenses', 'Growth',
+                'Loss', 'Investment', 'Returns', 'Costs', 'Savings'
+            ]
         };
     }
 
@@ -26,7 +44,9 @@ class BarChartElement extends HTMLElement {
         Object.assign(this.style, {
             display: 'block',
             width: '100%',
-            height: `${this.settings.chartHeight}px`,
+            height: '100%',
+            minWidth: '250px',
+            minHeight: '250px',
             position: 'relative',
             overflow: 'hidden',
             padding: '0',
@@ -47,9 +67,7 @@ class BarChartElement extends HTMLElement {
             if (name === 'data') {
                 this.settings.datasets = JSON.parse(newValue);
             } else if (name === 'options') {
-                const newOptions = JSON.parse(newValue);
-                Object.assign(this.settings, newOptions);
-                this.style.height = `${this.settings.chartHeight}px`;
+                Object.assign(this.settings, JSON.parse(newValue));
             }
             if (this.chart) {
                 this.updateChart();
@@ -74,7 +92,7 @@ class BarChartElement extends HTMLElement {
         const data = [];
         entries.forEach(entry => {
             const [label, value] = entry.split(',');
-            if (label && !isNaN(value)) {
+            if (label && value) {
                 labels.push(label);
                 data.push(parseFloat(value));
             }
@@ -91,43 +109,47 @@ class BarChartElement extends HTMLElement {
         Object.assign(canvas.style, {
             width: '100%',
             height: '100%',
+            minWidth: '250px',
+            minHeight: '250px',
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            top: '0',
+            left: '0',
             margin: '0',
             padding: '0'
         });
         this.appendChild(canvas);
         const ctx = canvas.getContext('2d');
 
-        const rect = this.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-
         const datasets = this.settings.datasets
             .map((rawData, index) => {
                 const parsed = this.parseDataset(rawData);
                 if (!parsed) return null;
-                const backgroundColor = this.settings.colors[index % this.settings.colors.length] || '#000000';
+                const borderColor = this.settings.colors[index % this.settings.colors.length];
+                const fillColor = this.settings.fillColors[index % this.settings.fillColors.length];
+                const opacityHex = Math.round(this.settings.areaOpacity * 255).toString(16).padStart(2, '0');
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: backgroundColor,
-                    borderColor: backgroundColor,
-                    borderWidth: 1,
-                    borderRadius: this.settings.barBorderRadius, // Apply border radius to bars
-                    borderSkipped: false // Ensure all sides can be rounded
+                    borderColor: borderColor,
+                    backgroundColor: this.settings.fillArea ? `${fillColor}${opacityHex}` : 'transparent',
+                    yAxisID: `y${index % 2 === 0 ? '' : 1}`,
+                    tension: this.settings.lineTension,
+                    stepped: this.settings.steppedLine,
+                    pointStyle: this.settings.pointStyle,
+                    pointRadius: this.settings.showPoints ? this.settings.pointRadius : 0,
+                    borderWidth: this.settings.lineWidth,
+                    borderDash: this.settings.dashedLine ? [5, 5] : [],
+                    fill: this.settings.fillArea ? 'origin' : false
                 };
             })
             .filter(dataset => dataset !== null);
 
         if (datasets.length === 0) return;
 
-        const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
+        const uniqueLabels = [...new Set(datasets.flatMap(ds => ds.data.length > 0 ? ds.data.map((_, i) => this.settings.datasets[datasets.indexOf(ds)].split(';')[i].split(',')[0]) : []))];
 
         this.chart = new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: uniqueLabels,
                 datasets: datasets
@@ -137,7 +159,7 @@ class BarChartElement extends HTMLElement {
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
-                        top: 30,
+                        top: this.settings.legendPosition === 'top' ? 30 : 10, // Increased padding for top legend
                         bottom: 10,
                         left: 10,
                         right: 10
@@ -145,112 +167,103 @@ class BarChartElement extends HTMLElement {
                 },
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'top',
+                        display: this.settings.showLegend,
+                        position: this.settings.legendPosition,
                         labels: {
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: '#666',
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
+                            color: '#333',
                             padding: 10
                         }
                     },
-                    datalabels: {
-                        display: this.settings.showDataLabels,
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                        color: '#666',
-                        anchor: 'end',
-                        align: 'top'
+                    title: { 
+                        display: true, 
+                        text: this.settings.chartTitle, 
+                        font: { size: 20, family: this.settings.fontFamily, weight: 'bold' }, 
+                        color: '#2c3e50',
+                        padding: { top: 10, bottom: 10 }
                     },
-                    tooltip: {
-                        enabled: true,
-                        position: 'nearest',
-                        callbacks: {
-                            label: context => {
-                                const dataset = context.dataset;
-                                const value = context.parsed.y;
-                                return `${dataset.label}: ${value}`;
-                            }
-                        }
+                    datalabels: { 
+                        display: this.settings.showDataLabels, 
+                        font: { size: this.settings.fontSize, family: this.settings.fontFamily }, 
+                        color: '#333' 
                     }
                 },
                 scales: {
                     x: {
-                        title: {
-                            display: true,
-                            text: this.settings.xAxisTitle,
-                            font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
-                            color: this.settings.xAxisColor
+                        title: { 
+                            display: true, 
+                            text: 'Months', 
+                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily }, 
+                            color: this.settings.xAxisColor 
                         },
-                        grid: {
-                            display: this.settings.showGrid,
-                            lineWidth: this.settings.gridLineWidth,
-                            color: this.settings.gridLineColor
-                        },
-                        ticks: {
-                            color: this.settings.xAxisColor,
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily }
+                        grid: { display: this.settings.showGrid, color: '#ecf0f1' },
+                        ticks: { 
+                            color: this.settings.xAxisColor, 
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily } 
                         }
                     },
                     y: {
-                        title: {
-                            display: true,
-                            text: this.settings.yAxisTitle, // Updated to use yAxisTitle
-                            font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
-                            color: this.settings.yAxisColor
+                        title: { 
+                            display: true, 
+                            text: this.settings.primaryAxisTitle, 
+                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily }, 
+                            color: this.settings.yAxisColor 
                         },
-                        grid: {
-                            display: this.settings.showGrid,
-                            lineWidth: this.settings.gridLineWidth,
-                            color: this.settings.gridLineColor
+                        grid: { display: this.settings.showGrid, color: '#ecf0f1' },
+                        ticks: { 
+                            color: this.settings.yAxisColor, 
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily } 
                         },
-                        ticks: {
-                            color: this.settings.yAxisColor,
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily }
+                        position: 'left'
+                    },
+                    y1: {
+                        title: { 
+                            display: true, 
+                            text: this.settings.secondaryAxisTitle, 
+                            font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily }, 
+                            color: this.settings.yAxisColor 
                         },
-                        beginAtZero: true
+                        grid: { display: false },
+                        ticks: { 
+                            color: this.settings.yAxisColor, 
+                            font: { size: this.settings.fontSize, family: this.settings.fontFamily } 
+                        },
+                        position: 'right'
                     }
                 },
-                animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
+                animation: { duration: this.settings.enableAnimations ? 1500 : 0, easing: 'easeInOutQuart' }
             }
         });
-
-        this.onResize = () => this.updateChartSize();
-        window.addEventListener('resize', this.onResize);
-    }
-
-    updateChartSize() {
-        if (this.chart) {
-            const rect = this.getBoundingClientRect();
-            this.chart.canvas.width = rect.width;
-            this.chart.canvas.height = rect.height;
-            this.chart.resize();
-        }
     }
 
     updateChart() {
         if (!this.chart) return;
 
-        const rect = this.getBoundingClientRect();
-        this.chart.canvas.width = rect.width;
-        this.chart.canvas.height = rect.height;
-
         const datasets = this.settings.datasets
             .map((rawData, index) => {
                 const parsed = this.parseDataset(rawData);
                 if (!parsed) return null;
-                const backgroundColor = this.settings.colors[index % this.settings.colors.length] || '#000000';
+                const borderColor = this.settings.colors[index % this.settings.colors.length];
+                const fillColor = this.settings.fillColors[index % this.settings.fillColors.length];
+                const opacityHex = Math.round(this.settings.areaOpacity * 255).toString(16).padStart(2, '0');
                 return {
                     label: this.settings.legends[index] || `Dataset ${index + 1}`,
                     data: parsed.data,
-                    backgroundColor: backgroundColor,
-                    borderColor: backgroundColor,
-                    borderWidth: 1,
-                    borderRadius: this.settings.barBorderRadius,
-                    borderSkipped: false
+                    borderColor: borderColor,
+                    backgroundColor: this.settings.fillArea ? `${fillColor}${opacityHex}` : 'transparent',
+                    yAxisID: `y${index % 2 === 0 ? '' : 1}`,
+                    tension: this.settings.lineTension,
+                    stepped: this.settings.steppedLine,
+                    pointStyle: this.settings.pointStyle,
+                    pointRadius: this.settings.showPoints ? this.settings.pointRadius : 0,
+                    borderWidth: this.settings.lineWidth,
+                    borderDash: this.settings.dashedLine ? [5, 5] : [],
+                    fill: this.settings.fillArea ? 'origin' : false
                 };
             })
             .filter(dataset => dataset !== null);
 
-        const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
+        const uniqueLabels = [...new Set(datasets.flatMap(ds => ds.data.length > 0 ? ds.data.map((_, i) => this.settings.datasets[datasets.indexOf(ds)].split(';')[i].split(',')[0]) : []))];
 
         this.chart.data.labels = uniqueLabels;
         this.chart.data.datasets = datasets;
@@ -258,7 +271,7 @@ class BarChartElement extends HTMLElement {
             ...this.chart.options,
             layout: {
                 padding: {
-                    top: 30,
+                    top: this.settings.legendPosition === 'top' ? 30 : 10,
                     bottom: 10,
                     left: 10,
                     right: 10
@@ -267,62 +280,76 @@ class BarChartElement extends HTMLElement {
             plugins: {
                 ...this.chart.options.plugins,
                 legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                        color: '#666',
+                    display: this.settings.showLegend,
+                    position: this.settings.legendPosition,
+                    labels: { 
+                        font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' }, 
+                        color: '#333',
                         padding: 10
                     }
                 },
-                datalabels: { 
-                    display: this.settings.showDataLabels, 
-                    font: { size: this.settings.fontSize, family: this.settings.fontFamily }, 
-                    color: '#666',
-                    anchor: 'end',
-                    align: 'top'
-                }
+                title: { 
+                    display: true, 
+                    text: this.settings.chartTitle, 
+                    font: { size: 20, family: this.settings.fontFamily, weight: 'bold' }, 
+                    color: '#2c3e50',
+                    padding: { top: 10, bottom: 10 }
+                },
+                datalabels: { display: this.settings.showDataLabels, font: { size: this.settings.fontSize, family: this.settings.fontFamily }, color: '#333' }
             },
             scales: {
                 x: {
-                    title: {
-                        display: true,
-                        text: this.settings.xAxisTitle,
-                        font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
-                        color: this.settings.xAxisColor
-                    },
-                    grid: {
-                        display: this.settings.showGrid,
-                        lineWidth: this.settings.gridLineWidth,
-                        color: this.settings.gridLineColor
-                    },
+                    ...this.chart.options.scales.x,
+                    title: { display: true, text: 'Months', font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily }, color: this.settings.xAxisColor },
+                    grid: { display: this.settings.showGrid },
                     ticks: { color: this.settings.xAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
                 },
                 y: {
-                    title: {
-                        display: true,
-                        text: this.settings.yAxisTitle, // Updated to use yAxisTitle
-                        font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
-                        color: this.settings.yAxisColor
-                    },
-                    grid: {
-                        display: this.settings.showGrid,
-                        lineWidth: this.settings.gridLineWidth,
-                        color: this.settings.gridLineColor
-                    },
-                    ticks: { color: this.settings.yAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } },
-                    beginAtZero: true
+                    ...this.chart.options.scales.y,
+                    title: { display: true, text: this.settings.primaryAxisTitle, font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily }, color: this.settings.yAxisColor },
+                    grid: { display: this.settings.showGrid },
+                    ticks: { color: this.settings.yAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
+                },
+                y1: {
+                    ...this.chart.options.scales.y1,
+                    title: { display: true, text: this.settings.secondaryAxisTitle, font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily }, color: this.settings.yAxisColor },
+                    ticks: { color: this.settings.yAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
                 }
             },
-            animation: { duration: this.settings.enableAnimations ? 1000 : 0 }
+            animation: { duration: this.settings.enableAnimations ? 1500 : 0 }
         };
         this.chart.update();
     }
 
     disconnectedCallback() {
         if (this.chart) this.chart.destroy();
-        window.removeEventListener('resize', this.onResize);
     }
 }
 
-customElements.define('bar-chart', BarChartElement);
+customElements.define('multi-axis-chart', MultiAxisChartElement);
+
+export const STYLE = `
+    :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-width: 250px;
+        min-height: 250px;
+        position: relative;
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+    }
+    canvas {
+        width: 100% !important;
+        height: 100% !important;
+        min-width: 250px !important;
+        min-height: 250px !important;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background: #fff;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+`;
