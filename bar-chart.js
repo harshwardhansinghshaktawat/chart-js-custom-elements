@@ -20,11 +20,11 @@ class BarChartElement extends HTMLElement {
             colors: ['#ff6384', '#36a2eb'],
             legends: ['Dataset 1', 'Dataset 2']
         };
-        console.log('BarChartElement constructed');
+        console.log('BarChartElement constructed'); // Debug log
     }
 
     connectedCallback() {
-        console.log('BarChartElement connected');
+        console.log('BarChartElement connected'); // Debug log
         Object.assign(this.style, {
             display: 'block',
             width: '100%',
@@ -35,13 +35,10 @@ class BarChartElement extends HTMLElement {
             margin: '0'
         });
 
-        // Delay rendering slightly to ensure DOM is ready in live site
-        setTimeout(() => {
-            this.loadChartJs(() => {
-                console.log('Chart.js loaded, rendering chart');
-                this.renderChart();
-            });
-        }, 100); // 100ms delay
+        this.loadChartJs(() => {
+            console.log('Chart.js loaded, rendering chart'); // Debug log
+            this.renderChart();
+        });
     }
 
     static get observedAttributes() {
@@ -50,7 +47,7 @@ class BarChartElement extends HTMLElement {
 
     attributeChangedCallback(name, oldValue, newValue) {
         if (newValue && newValue !== oldValue) {
-            console.log(`Attribute ${name} changed from ${oldValue} to ${newValue}`);
+            console.log(`Attribute ${name} changed from ${oldValue} to ${newValue}`); // Debug log
             if (name === 'data') {
                 this.settings.datasets = JSON.parse(newValue);
                 console.log('Datasets updated:', this.settings.datasets);
@@ -71,35 +68,23 @@ class BarChartElement extends HTMLElement {
 
     loadChartJs(callback) {
         if (window.Chart) {
-            console.log('Chart.js already loaded');
+            console.log('Chart.js already loaded'); // Debug log
             callback();
             return;
         }
-        console.log('Loading Chart.js');
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
         script.onload = () => {
-            console.log('Chart.js script loaded successfully');
+            console.log('Chart.js script loaded successfully'); // Debug log
             callback();
         };
-        script.onerror = () => {
-            console.error('Failed to load Chart.js');
-            // Fallback to a known working CDN
-            const fallbackScript = document.createElement('script');
-            fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.3/chart.umd.min.js';
-            fallbackScript.onload = () => {
-                console.log('Fallback Chart.js loaded');
-                callback();
-            };
-            fallbackScript.onerror = () => console.error('Failed to load fallback Chart.js');
-            document.head.appendChild(fallbackScript);
-        };
+        script.onerror = () => console.error('Failed to load Chart.js');
         document.head.appendChild(script);
     }
 
     parseDataset(rawData) {
         if (!rawData) {
-            console.error('No raw data provided');
+            console.error('No raw data provided'); // Debug log
             return null;
         }
         const entries = rawData.split(';');
@@ -111,15 +96,15 @@ class BarChartElement extends HTMLElement {
                 labels.push(label);
                 data.push(parseFloat(value));
             } else {
-                console.warn(`Invalid entry: ${entry}`);
+                console.warn(`Invalid entry: ${entry}`); // Debug log
             }
         });
-        console.log('Parsed dataset:', { labels, data });
+        console.log('Parsed dataset:', { labels, data }); // Debug log
         return data.length > 0 ? { labels, data } : null;
     }
 
     renderChart() {
-        console.log('Attempting to render chart with settings:', this.settings);
+        console.log('Attempting to render chart with settings:', this.settings); // Debug log
         while (this.firstChild) {
             this.removeChild(this.firstChild);
         }
@@ -145,7 +130,7 @@ class BarChartElement extends HTMLElement {
         const rect = this.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        console.log('Canvas dimensions set:', { width: rect.width, height: rect.height });
+        console.log('Canvas dimensions set:', { width: rect.width, height: rect.height }); // Debug log
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
@@ -170,7 +155,7 @@ class BarChartElement extends HTMLElement {
         }
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Chart data prepared:', { labels: uniqueLabels, datasets });
+        console.log('Chart data prepared:', { labels: uniqueLabels, datasets }); // Debug log
 
         if (!window.Chart) {
             console.error('Chart.js not loaded before renderChart');
@@ -264,9 +249,9 @@ class BarChartElement extends HTMLElement {
                     animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
                 }
             });
-            console.log('Chart rendered successfully:', this.chart);
+            console.log('Chart rendered successfully:', this.chart); // Debug log
         } catch (error) {
-            console.error('Error rendering chart:', error);
+            console.error('Error rendering chart:', error); // Debug log
         }
 
         this.onResize = () => this.updateChartSize();
@@ -279,7 +264,7 @@ class BarChartElement extends HTMLElement {
             this.chart.canvas.width = rect.width;
             this.chart.canvas.height = rect.height;
             this.chart.resize();
-            console.log('Chart resized:', { width: rect.width, height: rect.height });
+            console.log('Chart resized:', { width: rect.width, height: rect.height }); // Debug log
         } else {
             console.warn('Chart not initialized for resize');
         }
@@ -287,7 +272,7 @@ class BarChartElement extends HTMLElement {
 
     updateChart() {
         if (!this.chart) {
-            console.warn('Chart not initialized, attempting to render');
+            console.warn('Chart not initialized, attempting to render'); // Debug log
             this.renderChart();
             return;
         }
@@ -314,7 +299,7 @@ class BarChartElement extends HTMLElement {
             .filter(dataset => dataset !== null);
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Updating chart with:', { labels: uniqueLabels, datasets });
+        console.log('Updating chart with:', { labels: uniqueLabels, datasets }); // Debug log
 
         this.chart.data.labels = uniqueLabels;
         this.chart.data.datasets = datasets;
@@ -323,16 +308,16 @@ class BarChartElement extends HTMLElement {
 
         try {
             this.chart.update();
-            console.log('Chart updated successfully');
+            console.log('Chart updated successfully'); // Debug log
         } catch (error) {
-            console.error('Error updating chart:', error);
+            console.error('Error updating chart:', error); // Debug log
         }
     }
 
     disconnectedCallback() {
         if (this.chart) {
             this.chart.destroy();
-            console.log('Chart destroyed');
+            console.log('Chart destroyed'); // Debug log
         }
         window.removeEventListener('resize', this.onResize);
     }
