@@ -15,6 +15,7 @@ class VerticalBarChartElement extends HTMLElement {
             yAxisColor: '#666',
             chartHeight: 400,
             xAxisTitle: 'Categories',
+            yAxisTitle: 'Values', // Added yAxisTitle
             colors: ['#ff6384', '#36a2eb'],
             legends: ['Dataset 1', 'Dataset 2']
         };
@@ -135,6 +136,8 @@ class VerticalBarChartElement extends HTMLElement {
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
         console.log('Chart data:', { labels: uniqueLabels, datasets });
 
+        console.log('Rendering chart with yAxisTitle:', this.settings.yAxisTitle); // Debug log
+
         this.chart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -202,7 +205,7 @@ class VerticalBarChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: 'Values',
+                            text: this.settings.yAxisTitle, // Updated to use yAxisTitle
                             font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
@@ -221,7 +224,7 @@ class VerticalBarChartElement extends HTMLElement {
                 animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
             }
         });
-        console.log('Chart initialized:', this.chart);
+        console.log('Chart initialized with yAxisTitle:', this.chart.options.scales.y.title.text); // Debug log
 
         this.onResize = () => this.updateChartSize();
         window.addEventListener('resize', this.onResize);
@@ -260,11 +263,15 @@ class VerticalBarChartElement extends HTMLElement {
             .filter(dataset => dataset !== null);
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Updating chart with:', { labels: uniqueLabels, datasets });
+        console.log('Updating chart with yAxisTitle:', this.settings.yAxisTitle); // Debug log
 
         this.chart.data.labels = uniqueLabels;
         this.chart.data.datasets = datasets;
+        this.chart.options.scales.x.title.text = this.settings.xAxisTitle; // Explicitly set X-axis title
+        this.chart.options.scales.y.title.text = this.settings.yAxisTitle; // Explicitly set Y-axis title
         this.chart.update();
+
+        console.log('Chart updated with yAxisTitle:', this.chart.options.scales.y.title.text); // Debug log
     }
 
     disconnectedCallback() {
