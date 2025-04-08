@@ -16,6 +16,7 @@ class BarChartElement extends HTMLElement {
             yAxisColor: '#666',
             chartHeight: 400,
             xAxisTitle: 'X Values',
+            yAxisTitle: 'Y Values', // Added yAxisTitle
             colors: ['#ff6384', '#36a2eb'],
             legends: ['Dataset 1', 'Dataset 2']
         };
@@ -192,7 +193,7 @@ class BarChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: 'Y Values',
+                            text: this.settings.yAxisTitle, // Updated to use yAxisTitle
                             font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
@@ -300,7 +301,7 @@ class BarChartElement extends HTMLElement {
                 y: {
                     title: {
                         display: true,
-                        text: 'Y Values',
+                        text: this.settings.yAxisTitle, // Updated to use yAxisTitle
                         font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                         color: this.settings.yAxisColor
                     },
