@@ -1,4 +1,4 @@
-class VerticalBarChartElement extends HTMLElement {
+class BarChartElement extends HTMLElement {
     constructor() {
         super();
         this.chart = null;
@@ -11,11 +11,12 @@ class VerticalBarChartElement extends HTMLElement {
             showDataLabels: false,
             fontFamily: 'Arial',
             fontSize: 12,
+            barBorderRadius: 5, // Default border radius for rounded bars
             xAxisColor: '#666',
             yAxisColor: '#666',
             chartHeight: 400,
-            xAxisTitle: 'Categories',
-            yAxisTitle: 'Values',
+            xAxisTitle: 'X Values',
+            yAxisTitle: 'Y Values', // Added yAxisTitle
             colors: ['#ff6384', '#36a2eb'],
             legends: ['Dataset 1', 'Dataset 2']
         };
@@ -45,12 +46,10 @@ class VerticalBarChartElement extends HTMLElement {
         if (newValue && newValue !== oldValue) {
             if (name === 'data') {
                 this.settings.datasets = JSON.parse(newValue);
-                console.log('Datasets updated:', this.settings.datasets);
             } else if (name === 'options') {
                 const newOptions = JSON.parse(newValue);
                 Object.assign(this.settings, newOptions);
                 this.style.height = `${this.settings.chartHeight}px`;
-                console.log('Options updated:', this.settings);
             }
             if (this.chart) {
                 this.updateChart();
@@ -69,10 +68,7 @@ class VerticalBarChartElement extends HTMLElement {
     }
 
     parseDataset(rawData) {
-        if (!rawData) {
-            console.error('No raw data provided');
-            return null;
-        }
+        if (!rawData) return null;
         const entries = rawData.split(';');
         const labels = [];
         const data = [];
@@ -81,12 +77,9 @@ class VerticalBarChartElement extends HTMLElement {
             if (label && !isNaN(value)) {
                 labels.push(label);
                 data.push(parseFloat(value));
-            } else {
-                console.warn(`Invalid entry: ${entry}`);
             }
         });
-        console.log('Parsed dataset:', { labels, data });
-        return data.length > 0 ? { labels, data } : null;
+        return { labels, data };
     }
 
     renderChart() {
@@ -111,7 +104,6 @@ class VerticalBarChartElement extends HTMLElement {
         const rect = this.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        console.log('Canvas dimensions:', { width: rect.width, height: rect.height });
 
         const datasets = this.settings.datasets
             .map((rawData, index) => {
@@ -123,20 +115,16 @@ class VerticalBarChartElement extends HTMLElement {
                     data: parsed.data,
                     backgroundColor: backgroundColor,
                     borderColor: backgroundColor,
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: this.settings.barBorderRadius, // Apply border radius to bars
+                    borderSkipped: false // Ensure all sides can be rounded
                 };
             })
             .filter(dataset => dataset !== null);
 
-        if (datasets.length === 0) {
-            console.error('No valid datasets to render');
-            return;
-        }
+        if (datasets.length === 0) return;
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Chart data:', { labels: uniqueLabels, datasets });
-
-        console.log('Rendering chart with yAxisTitle:', this.settings.yAxisTitle);
 
         this.chart = new Chart(ctx, {
             type: 'bar',
@@ -205,7 +193,7 @@ class VerticalBarChartElement extends HTMLElement {
                     y: {
                         title: {
                             display: true,
-                            text: this.settings.yAxisTitle,
+                            text: this.settings.yAxisTitle, // Updated to use yAxisTitle
                             font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
                             color: this.settings.yAxisColor
                         },
@@ -224,7 +212,9 @@ class VerticalBarChartElement extends HTMLElement {
                 animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
             }
         });
-        console.log('Chart initialized with yAxisTitle:', this.chart.options.scales.y.title.text);
+
+        this.onResize = () => this.updateChartSize();
+        window.addEventListener('resize', this.onResize);
     }
 
     updateChartSize() {
@@ -233,7 +223,6 @@ class VerticalBarChartElement extends HTMLElement {
             this.chart.canvas.width = rect.width;
             this.chart.canvas.height = rect.height;
             this.chart.resize();
-            console.log('Chart resized:', { width: rect.width, height: rect.height });
         }
     }
 
@@ -254,51 +243,80 @@ class VerticalBarChartElement extends HTMLElement {
                     data: parsed.data,
                     backgroundColor: backgroundColor,
                     borderColor: backgroundColor,
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: this.settings.barBorderRadius,
+                    borderSkipped: false
                 };
             })
             .filter(dataset => dataset !== null);
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => this.parseDataset(this.settings.datasets[datasets.indexOf(ds)]).labels))];
-        console.log('Updating chart with:', { labels: uniqueLabels, datasets });
-        console.log('Updating chart with yAxisTitle:', this.settings.yAxisTitle);
 
         this.chart.data.labels = uniqueLabels;
         this.chart.data.datasets = datasets;
-        
-        // Explicitly update axis titles
-        this.chart.options.scales.x.title.text = this.settings.xAxisTitle;
-        this.chart.options.scales.y.title.text = this.settings.yAxisTitle;
-
-        // Force update by resetting the scales configuration
-        this.chart.options.scales.y = {
-            title: {
-                display: true,
-                text: this.settings.yAxisTitle,
-                font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
-                color: this.settings.yAxisColor
+        this.chart.options = {
+            ...this.chart.options,
+            layout: {
+                padding: {
+                    top: 30,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                }
             },
-            grid: {
-                display: this.settings.showGrid,
-                lineWidth: this.settings.gridLineWidth,
-                color: this.settings.gridLineColor
+            plugins: {
+                ...this.chart.options.plugins,
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                        color: '#666',
+                        padding: 10
+                    }
+                },
+                datalabels: { 
+                    display: this.settings.showDataLabels, 
+                    font: { size: this.settings.fontSize, family: this.settings.fontFamily }, 
+                    color: '#666',
+                    anchor: 'end',
+                    align: 'top'
+                }
             },
-            ticks: {
-                color: this.settings.yAxisColor,
-                font: { size: this.settings.fontSize, family: this.settings.fontFamily }
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: this.settings.xAxisTitle,
+                        font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
+                        color: this.settings.xAxisColor
+                    },
+                    grid: {
+                        display: this.settings.showGrid,
+                        lineWidth: this.settings.gridLineWidth,
+                        color: this.settings.gridLineColor
+                    },
+                    ticks: { color: this.settings.xAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: this.settings.yAxisTitle, // Updated to use yAxisTitle
+                        font: { size: this.settings.fontSize + 2, family: this.settings.fontFamily },
+                        color: this.settings.yAxisColor
+                    },
+                    grid: {
+                        display: this.settings.showGrid,
+                        lineWidth: this.settings.gridLineWidth,
+                        color: this.settings.gridLineColor
+                    },
+                    ticks: { color: this.settings.yAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } },
+                    beginAtZero: true
+                }
             },
-            beginAtZero: true
+            animation: { duration: this.settings.enableAnimations ? 1000 : 0 }
         };
-
         this.chart.update();
-        console.log('Chart updated with yAxisTitle:', this.chart.options.scales.y.title.text);
-
-        // Fallback: If update doesn’t work, force a full re-render
-        if (this.chart.options.scales.y.title.text !== this.settings.yAxisTitle) {
-            console.warn('Y-axis title update failed, forcing re-render');
-            this.chart.destroy();
-            this.renderChart();
-        }
     }
 
     disconnectedCallback() {
@@ -307,4 +325,4 @@ class VerticalBarChartElement extends HTMLElement {
     }
 }
 
-customElements.define('vertical-bar-chart', VerticalBarChartElement);
+customElements.define('bar-chart', BarChartElement);
