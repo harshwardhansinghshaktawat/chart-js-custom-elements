@@ -25,7 +25,7 @@ class SimpleLineChartElement extends HTMLElement {
             chartTitle: 'Simple Line Chart',
             chartHeight: 400,
             xAxisTitle: 'Months',
-            yAxisTitle: 'Values', // Kept only yAxisTitle
+            yAxisTitle: 'Values',
             colors: [
                 '#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6',
                 '#1abc9c', '#e67e22', '#34495e', '#8e44ad', '#2c3e50'
@@ -65,10 +65,12 @@ class SimpleLineChartElement extends HTMLElement {
         if (newValue && newValue !== oldValue) {
             if (name === 'data') {
                 this.settings.datasets = JSON.parse(newValue);
+                console.log('Datasets updated:', this.settings.datasets); // Debug log
             } else if (name === 'options') {
                 const newOptions = JSON.parse(newValue);
                 Object.assign(this.settings, newOptions);
                 this.style.height = `${this.settings.chartHeight}px`;
+                console.log('Options updated:', this.settings); // Debug log
             }
             if (this.chart) {
                 this.updateChart();
@@ -151,6 +153,8 @@ class SimpleLineChartElement extends HTMLElement {
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => ds.data.length > 0 ? ds.data.map((_, i) => this.settings.datasets[datasets.indexOf(ds)].split(';')[i].split(',')[0]) : []))];
 
+        console.log('Rendering chart with yAxisTitle:', this.settings.yAxisTitle); // Debug log
+
         this.chart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -162,7 +166,7 @@ class SimpleLineChartElement extends HTMLElement {
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
-                        top: 30, // Space for legend at top
+                        top: 30,
                         bottom: 10,
                         left: 10,
                         right: 10
@@ -264,6 +268,8 @@ class SimpleLineChartElement extends HTMLElement {
             }
         });
 
+        console.log('Chart initialized with yAxisTitle:', this.chart.options.scales.y.title.text); // Debug log
+
         this.onResize = () => this.updateChartSize();
         window.addEventListener('resize', this.onResize);
     }
@@ -309,71 +315,15 @@ class SimpleLineChartElement extends HTMLElement {
 
         const uniqueLabels = [...new Set(datasets.flatMap(ds => ds.data.length > 0 ? ds.data.map((_, i) => this.settings.datasets[datasets.indexOf(ds)].split(';')[i].split(',')[0]) : []))];
 
+        console.log('Updating chart with yAxisTitle:', this.settings.yAxisTitle); // Debug log
+
         this.chart.data.labels = uniqueLabels;
         this.chart.data.datasets = datasets;
-        this.chart.options = {
-            ...this.chart.options,
-            layout: {
-                padding: {
-                    top: 30,
-                    bottom: 10,
-                    left: 10,
-                    right: 10
-                }
-            },
-            plugins: {
-                ...this.chart.options.plugins,
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily, weight: 'bold' },
-                        color: '#333',
-                        padding: 10
-                    }
-                },
-                title: {
-                    display: true,
-                    text: this.settings.chartTitle,
-                    font: { size: 20, family: this.settings.fontFamily, weight: 'bold' },
-                    color: '#2c3e50',
-                    padding: { top: 10, bottom: 10 }
-                },
-                datalabels: { display: this.settings.showDataLabels, font: { size: this.settings.fontSize, family: this.settings.fontFamily }, color: '#333' }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: this.settings.xAxisTitle,
-                        font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
-                        color: this.settings.xAxisColor
-                    },
-                    grid: {
-                        display: this.settings.showGrid,
-                        lineWidth: this.settings.gridLineWidth,
-                        color: this.settings.gridLineColor
-                    },
-                    ticks: { color: this.settings.xAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: this.settings.yAxisTitle,
-                        font: { size: this.settings.fontSize + 4, family: this.settings.fontFamily },
-                        color: this.settings.yAxisColor
-                    },
-                    grid: {
-                        display: this.settings.showGrid,
-                        lineWidth: this.settings.gridLineWidth,
-                        color: this.settings.gridLineColor
-                    },
-                    ticks: { color: this.settings.yAxisColor, font: { size: this.settings.fontSize, family: this.settings.fontFamily } }
-                }
-            },
-            animation: { duration: this.settings.enableAnimations ? 1500 : 0 }
-        };
+        this.chart.options.scales.x.title.text = this.settings.xAxisTitle; // Explicitly set X-axis title
+        this.chart.options.scales.y.title.text = this.settings.yAxisTitle; // Explicitly set Y-axis title
         this.chart.update();
+
+        console.log('Chart updated with yAxisTitle:', this.chart.options.scales.y.title.text); // Debug log
     }
 
     disconnectedCallback() {
