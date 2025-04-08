@@ -1,17 +1,13 @@
-class RadarChartElement extends HTMLElement {
+class PolarChartElement extends HTMLElement {
     constructor() {
         super();
         this.chart = null;
         this.settings = {
             dataset: '',
-            showGrid: true,
-            gridLineWidth: 1,
-            gridLineColor: '#e0e0e0',
             enableAnimations: true,
             showDataLabels: false,
             fontFamily: 'Arial',
             fontSize: 12,
-            axisColor: '#666',
             chartHeight: 400,
             colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'], // Colors for segments
             legends: ['Dataset 1'] // Not used directly for segment legends
@@ -26,11 +22,12 @@ class RadarChartElement extends HTMLElement {
             position: 'relative',
             overflow: 'hidden',
             padding: '0',
-            margin: '0'
+            margin: '0',
+            boxSizing: 'border-box'
         });
 
         this.loadChartJs(() => {
-            this.renderChart();
+            setTimeout(() => this.renderChart(), 100);
         });
     }
 
@@ -74,7 +71,7 @@ class RadarChartElement extends HTMLElement {
         const entries = rawData.split(';');
         const labels = [];
         const data = [];
-        entries.forEach(entry => {
+        entries.forEach((entry, index) => {
             const [label, value] = entry.split(',');
             if (label && !isNaN(value)) {
                 labels.push(label);
@@ -94,12 +91,9 @@ class RadarChartElement extends HTMLElement {
 
         const canvas = document.createElement('canvas');
         Object.assign(canvas.style, {
+            display: 'block',
             width: '100%',
             height: '100%',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
             margin: '0',
             padding: '0'
         });
@@ -107,9 +101,12 @@ class RadarChartElement extends HTMLElement {
         const ctx = canvas.getContext('2d');
 
         const rect = this.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Custom element has zero dimensions:', { width: rect.width, height: rect.height });
+            return;
+        }
         canvas.width = rect.width;
         canvas.height = rect.height;
-        console.log('Canvas dimensions:', { width: rect.width, height: rect.height });
 
         const parsed = this.parseDataset(this.settings.dataset);
         if (!parsed) {
@@ -119,102 +116,82 @@ class RadarChartElement extends HTMLElement {
 
         const dataset = {
             data: parsed.data,
-            backgroundColor: this.settings.colors.map(color => `${color}33`), // 20% opacity for fill
-            borderColor: this.settings.colors,
-            borderWidth: 2,
-            pointBackgroundColor: this.settings.colors,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 1,
-            pointRadius: 4
+            backgroundColor: this.settings.colors.slice(0, parsed.data.length), // Match colors to data length
+            borderColor: '#fff',
+            borderWidth: 1
         };
 
         console.log('Chart data:', { labels: parsed.labels, dataset });
 
-        this.chart = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: parsed.labels, // Each segment gets its own label
-                datasets: [dataset] // Single dataset
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 30,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
-                    }
+        try {
+            this.chart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: parsed.labels, // Each segment gets its own label
+                    datasets: [dataset] // Single dataset
                 },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 30,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: this.settings.fontSize, family: this.settings.fontFamily },
+                                color: '#666',
+                                padding: 10
+                                // Default legend behavior uses segment colors
+                            }
+                        },
+                        datalabels: {
+                            display: this.settings.showDataLabels,
                             font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: '#666',
-                            padding: 10,
-                            generateLabels: (chart) => {
-                                const dataset = chart.data.datasets[0];
-                                return chart.data.labels.map((label, index) => ({
-                                    text: label,
-                                    fillStyle: dataset.backgroundColor[index],
-                                    strokeStyle: dataset.borderColor[index],
-                                    lineWidth: dataset.borderWidth,
-                                    datasetIndex: 0,
-                                    index: index
-                                }));
+                            color: '#fff',
+                            anchor: 'center',
+                            align: 'center'
+                        },
+                        tooltip: {
+                            enabled: true,
+                            position: 'nearest',
+                            callbacks: {
+                                label: context => {
+                                    const label = context.label || '';
+                                    const value = context.parsed.r;
+                                    return `${label}: ${value}`;
+                                }
                             }
                         }
                     },
-                    datalabels: {
-                        display: this.settings.showDataLabels,
-                        font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                        color: '#666',
-                        anchor: 'center',
-                        align: 'center'
-                    },
-                    tooltip: {
-                        enabled: true,
-                        position: 'nearest',
-                        callbacks: {
-                            label: context => {
-                                const label = context.label || '';
-                                const value = context.parsed.r;
-                                return `${label}: ${value}`;
-                            }
+                    scales: {
+                        r: {
+                            grid: {
+                                color: '#e0e0e0',
+                                lineWidth: 1
+                            },
+                            ticks: {
+                                display: true,
+                                color: '#666',
+                                font: { size: this.settings.fontSize, family: this.settings.fontFamily }
+                            },
+                            beginAtZero: true
                         }
-                    }
-                },
-                scales: {
-                    r: {
-                        angleLines: {
-                            display: true,
-                            color: this.settings.gridLineColor,
-                            lineWidth: this.settings.gridLineWidth
-                        },
-                        grid: {
-                            display: this.settings.showGrid,
-                            color: this.settings.gridLineColor,
-                            lineWidth: this.settings.gridLineWidth
-                        },
-                        pointLabels: {
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                            color: this.settings.axisColor
-                        },
-                        ticks: {
-                            display: true,
-                            color: this.settings.axisColor,
-                            font: { size: this.settings.fontSize, family: this.settings.fontFamily }
-                        },
-                        beginAtZero: true
-                    }
-                },
-                animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
-            }
-        });
-        console.log('Chart initialized:', this.chart);
+                    },
+                    animation: { duration: this.settings.enableAnimations ? 1000 : 0, easing: 'easeInOutQuart' }
+                }
+            });
+            console.log('Chart initialized:', this.chart);
+        } catch (error) {
+            console.error('Error initializing chart:', error);
+        }
 
         this.onResize = () => this.updateChartSize();
         window.addEventListener('resize', this.onResize);
@@ -223,10 +200,14 @@ class RadarChartElement extends HTMLElement {
     updateChartSize() {
         if (this.chart) {
             const rect = this.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn('Custom element has zero dimensions on resize:', { width: rect.width, height: rect.height });
+                return;
+            }
             this.chart.canvas.width = rect.width;
             this.chart.canvas.height = rect.height;
             this.chart.resize();
-            console.log('Chart resized:', { width: rect.width, height: rect.height });
+            console.log('Chart resized to:', { width: rect.width, height: rect.height });
         }
     }
 
@@ -234,6 +215,10 @@ class RadarChartElement extends HTMLElement {
         if (!this.chart) return;
 
         const rect = this.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Custom element has zero dimensions on update:', { width: rect.width, height: rect.height });
+            return;
+        }
         this.chart.canvas.width = rect.width;
         this.chart.canvas.height = rect.height;
 
@@ -245,41 +230,15 @@ class RadarChartElement extends HTMLElement {
 
         const dataset = {
             data: parsed.data,
-            backgroundColor: this.settings.colors.map(color => `${color}33`), // 20% opacity for fill
-            borderColor: this.settings.colors,
-            borderWidth: 2,
-            pointBackgroundColor: this.settings.colors,
-            pointBorderColor: '#fff',
-            pointBorderWidth: 1,
-            pointRadius: 4
+            backgroundColor: this.settings.colors.slice(0, parsed.data.length), // Match colors to data length
+            borderColor: '#fff',
+            borderWidth: 1
         };
 
         console.log('Updating chart with:', { labels: parsed.labels, dataset });
 
         this.chart.data.labels = parsed.labels;
         this.chart.data.datasets = [dataset];
-        this.chart.options.scales.r = {
-            angleLines: {
-                display: true,
-                color: this.settings.gridLineColor,
-                lineWidth: this.settings.gridLineWidth
-            },
-            grid: {
-                display: this.settings.showGrid,
-                color: this.settings.gridLineColor,
-                lineWidth: this.settings.gridLineWidth
-            },
-            pointLabels: {
-                font: { size: this.settings.fontSize, family: this.settings.fontFamily },
-                color: this.settings.axisColor
-            },
-            ticks: {
-                display: true,
-                color: this.settings.axisColor,
-                font: { size: this.settings.fontSize, family: this.settings.fontFamily }
-            },
-            beginAtZero: true
-        };
         this.chart.update();
     }
 
@@ -289,4 +248,4 @@ class RadarChartElement extends HTMLElement {
     }
 }
 
-customElements.define('polar-chart', RadarChartElement);
+customElements.define('polar-chart', PolarChartElement);
